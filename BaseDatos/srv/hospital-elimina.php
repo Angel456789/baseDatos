@@ -9,6 +9,6 @@ require_once __DIR__ . "/TABLA_HOSPITAL.php";
 
 ejecutaServicio(function () {
  $id = recuperaIdEntero("id");
- delete(pdo: Bd::pdo(), from: HOSPITAL, where: [ID_Hospital => $id]);
+ delete(pdo: Bd::pdo(), from: "HOSPITAL", where: ["ID_Hospital" => $id]);
  devuelveNoContent();
 });

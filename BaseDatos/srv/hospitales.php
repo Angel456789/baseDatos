@@ -15,19 +15,20 @@ ejecutaServicio(function () {
     $render = "<dl>";
 
     // Iterar sobre cada hospital en la lista
-    foreach ($lista as $modelo) {
-        $encodeId = urlencode($modelo["ID_Hospital"]); // ID del hospital
-        $id = htmlentities($encodeId); // ID escapado para la URL
-        $nombre = htmlentities($modelo["Nombre_Hospital"]); // Nombre escapado
-        $direccion = htmlentities($modelo["Direccion"]); // Dirección escapada
-
-        // Crear una entrada <dt> (definición del término) y <dd> (definición) para cada hospital
-        $render .=
-            "<dt>
-                <a href='modifica.html?id=$id'>$nombre</a>
-            </dt>
-            <dd>$direccion</dd>";
+    if (!empty($lista)) {
+        foreach ($lista as $modelo) {
+            $encodeId = urlencode($modelo["ID_Hospital"]);
+            $id = htmlentities($encodeId);
+            $nombre = htmlentities($modelo["Nombre_Hospital"]);
+            $telefono = htmlentities($modelo["Telefono"]);
+            $direccion = htmlentities($modelo["Direccion"]);
+    
+            $render .= "<dt><a href='modifica.html?id=$id'>$nombre</a></dt><dd>Direccion: $direccion, Telefono: $telefono </dd>";
+        }
+    } else {
+        $render .= "<p>No se encontraron hospitales.</p>";
     }
+    
 
     // Cerrar la lista <dl>
     $render .= "</dl>";

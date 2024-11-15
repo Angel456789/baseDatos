@@ -1,96 +1,115 @@
 import { exportaAHtml } from "./exportaAHtml.js"
-import { ProblemDetails } from "./ProblemDetails.js"
 
 /**
- * Espera a que la promesa de un fetch termine. Si
- * hay error, lanza una excepción. Si no hay error,
- * interpreta la respuesta del servidor como JSON y
- * la convierte en una literal de objeto.
- * 
- * @param { string | Promise<Response> } servicio
+ * @param { Document | HTMLElement } raizHtml
+ * @param { any } objeto
  */
-export async function consumeJson(servicio) {
-
- if (typeof servicio === "string") {
-  servicio = fetch(servicio, {
-   headers: { "Accept": "application/json, application/problem+json" }
-  })
- } else if (!(servicio instanceof Promise)) {
-  throw new Error("Servicio de tipo incorrecto.")
- }
-
- const respuesta = await servicio
-
- const headers = respuesta.headers
-
- if (respuesta.ok) {
-  // Aparentemente el servidor tuvo éxito.
-
-  if (respuesta.status === 204) {
-   // No contiene texto de respuesta.
-
-   return { headers, body: {} }
-
-  } else {
-
-   const texto = await respuesta.text()
-
-   try {
-
-    return { headers, body: JSON.parse(texto) }
-
-   } catch (error) {
-
-    // El contenido no es JSON. Probablemente sea texto de un error.
-    throw new ProblemDetails(respuesta.status, headers, texto,
-     "/error/errorinterno.html")
-
-   }
-
-  }
-
- } else {
-  // Hay un error.
-
-  const texto = await respuesta.text()
-
-  if (texto === "") {
-
-   // No hay texto. Se usa el texto predeterminado.
-   throw new ProblemDetails(respuesta.status, headers, respuesta.statusText)
-
-  } else {
-   // Debiera se un ProblemDetails en JSON.
-
-   try {
-
-    const { title, type, detail } = JSON.parse(texto)
-
-    throw new ProblemDetails(respuesta.status, headers,
-     typeof title === "string" ? title : respuesta.statusText,
-     typeof type === "string" ? type : undefined,
-     typeof detail === "string" ? detail : undefined)
-
-   } catch (error) {
-
-    if (error instanceof ProblemDetails) {
-     // El error si era un ProblemDetails
-
-     throw error
-
-    } else {
-
-     throw new ProblemDetails(respuesta.status, headers, respuesta.statusText,
-      undefined, texto)
-
+export function muestraObjeto(raizHtml, objeto) {
+    for (const [nombre, definiciones] of Object.entries(objeto)) {
+        if (Array.isArray(definiciones)) {
+            muestraArray(raizHtml, nombre, definiciones);
+        } else if (definiciones !== undefined && definiciones !== null) {
+            const elementoHtml = buscaElementoHtml(raizHtml, nombre);
+            if (elementoHtml instanceof HTMLInputElement) {
+                muestraInput(raizHtml, elementoHtml, definiciones);
+            } else if (elementoHtml !== null) {
+                for (const [atributo, valor] of Object.entries(definiciones)) {
+                    if (atributo in elementoHtml) {
+                        elementoHtml[atributo] = valor;
+                    }
+                }
+            }
+        }
     }
+}
+exportaAHtml(muestraObjeto);
 
-   }
-
-  }
-
- }
-
+/**
+ * @param { Document | HTMLElement } raizHtml
+ * @param { string } nombre
+ */
+export function buscaElementoHtml(raizHtml, nombre) {
+    return raizHtml.querySelector(
+        `#${nombre},[name="${nombre}"],[data-name="${nombre}"]`
+    );
 }
 
-exportaAHtml(consumeJson)
+/**
+ * @param { Document | HTMLElement } raizHtml
+ * @param { string } propiedad
+ * @param { any[] } valores
+ */
+function muestraArray(raizHtml, propiedad, valores) {
+    const conjunto = new Set(valores);
+    const elementos = raizHtml.querySelectorAll(
+        `[name="${propiedad}"],[data-name="${propiedad}"]`
+    );
+
+    if (elementos.length === 1) {
+        const elemento = elementos[0];
+        if (elemento instanceof HTMLSelectElement) {
+            const options = elemento.options;
+            for (let i = 0, len = options.length; i < len; i++) {
+                const option = options[i];
+                option.selected = conjunto.has(option.value);
+            }
+            return;
+        }
+    }
+
+    for (let i = 0, len = elementos.length; i < len; i++) {
+        const elemento = elementos[i];
+        if (elemento instanceof HTMLInputElement) {
+            elemento.checked = conjunto.has(elemento.value);
+        }
+    }
+}
+
+/**
+ * @param { Document | HTMLElement } raizHtml
+ * @param { HTMLInputElement } input
+ * @param { any } definiciones
+ */
+function muestraInput(raizHtml, input, definiciones) {
+    if ("value" in definiciones) {
+        console.log(`Asignando valor "${definiciones.value}" a input con name="${input.name}"`);
+        input.value = definiciones.value; // Asigna directamente el valor al input
+    } else {
+        console.warn(`No se encontró 'value' en las definiciones para input con name="${input.name}"`);
+    }
+
+    for (const [atributo, valor] of Object.entries(definiciones)) {
+        if (atributo == "data-file") {
+            const img = getImgParaElementoHtml(raizHtml, input);
+            if (img !== null) {
+                input.dataset.file = valor;
+                input.value = "";
+                if (valor === "") {
+                    img.src = "";
+                    img.hidden = true;
+                } else {
+                    img.src = valor;
+                    img.hidden = false;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @param { Document | HTMLElement } raizHtml
+ * @param { HTMLElement } elementoHtml
+ */
+export function getImgParaElementoHtml(raizHtml, elementoHtml) {
+    const imgId = elementoHtml.getAttribute("data-img");
+    if (imgId === null) {
+        return null;
+    } else {
+        const input = buscaElementoHtml(raizHtml, imgId);
+        if (input instanceof HTMLImageElement) {
+            return input;
+        } else {
+            return null;
+        }
+    }
+}

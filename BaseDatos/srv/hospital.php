@@ -35,7 +35,7 @@ ejecutaServicio(function () {
     // Si se encuentra el hospital, devolver los datos en formato JSON
     devuelveJson([
         "id" => ["value" => $id],
-        "nombre" => ["value" => $modelo["Nombre_Hospital"]],
+        "nombreH" => ["value" => $modelo["Nombre_Hospital"]],
         "direccion" => ["value" => $modelo["Direccion"]],
         "telefono" => ["value" => $modelo["Telefono"]],
     ]);
